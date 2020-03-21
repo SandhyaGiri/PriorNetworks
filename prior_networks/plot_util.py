@@ -1,8 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import seaborn as sns
 from matplotlib import cm
 from scipy.interpolate import griddata
+import torch.utils.data.sampler as sampler
 
 
 def plot_training_progress(train_loss, train_accuracy, test_loss, test_accuracy, test_steps,
@@ -63,4 +65,22 @@ def plot_contourf(inputs, uncertainty, ext, res, show=True, name='uncertainty'):
         plt.show()
     else:
         plt.savefig(name + '.png', bbox_inches='tight')
+    plt.close()
+
+def visualize_data(dataset, imagedir='runtime-images', filename='sample' , num_samples=10):
+    """
+    Displays random samples from the given dataset in a grid.
+    """
+    randomSampler = sampler.RandomSampler(dataset, True, num_samples=num_samples)
+    my_path = os.path.join(os.path.dirname(__file__), imagedir)
+    for index in randomSampler:
+        (image, label) = dataset[index]
+        plt.figure()
+        num_channels = image.shape[0]
+        if num_channels == 1:
+            image = image.squeeze()
+        else:
+            image = image.view(image.shape[1],image.shape[2],image.shape[0])
+        plt.imshow(image.numpy())
+        plt.savefig(os.path.join(my_path, filename + str(index) + '.png'), bbox_inches='tight', cmap='gray', )
     plt.close()

@@ -42,7 +42,7 @@ class ModelFactory(object):
         model_class = cls.MODEL_DICT[checkpoint[cls.ARCHITECTURE_FIELD]]
 
         try:
-            model_param_dict = {field: checkpoint[field] for field in cls.MODEL_ARGS_FIELDS}
+            model_param_dict = {field: checkpoint[field] for field in cls.EXPECTED_FIELDS} # deserialize the model with same expected fields!
         except KeyError:
             fields = ['num_classes', 'small_inputs']
             model_param_dict = {field: checkpoint[field] for field in fields}
@@ -56,7 +56,7 @@ class ModelFactory(object):
     @classmethod
     def checkpoint_model(cls, path, model, arch, **kwargs):
         assert arch in cls.MODEL_DICT.keys()
-        assert set(kwargs.keys()) == set(cls.EXPECTED_FIELDS)
+        assert set(kwargs.keys()) == set(cls.EXPECTED_FIELDS) # serialize the model with expected fields and their values.
 
         checkpoint_dict = kwargs
         checkpoint_dict[cls.STATE_DICT_FIELD] = model.state_dict()

@@ -54,7 +54,8 @@ def main():
                                       num_classes=args.num_classes,
                                       small_inputs=args.small_inputs,
                                       dropout_rate=args.drop_rate,
-                                      pretrained=False)
+                                      pretrained=False,
+                                      n_channels=args.n_channels)
 
     ModelFactory.checkpoint_model(path='model/model.tar',
                                   model=model,

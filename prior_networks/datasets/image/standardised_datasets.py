@@ -78,6 +78,9 @@ def construct_transforms(n_in: int,
 
 
 class MNIST(torchvision.datasets.MNIST):
+    # following mean std values are chosen so that input images (pixelvalues in range 0-1) are rescaled to range -1,1
+    mean = (0.5,)
+    std = (0.5,)
     def __init__(self, root, transform, target_transform, download, split):
         assert split in split_options
         train = False
@@ -147,6 +150,8 @@ class SEMEION(torchvision.datasets.SEMEION):
 
 
 class Omniglot(torchvision.datasets.Omniglot):
+    mean = (0.5,)
+    std = (0.5,)
     def __init__(self, root, transform, target_transform, download, split):
         assert split in split_options
         train = False

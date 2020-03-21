@@ -6,6 +6,14 @@ import torch.nn.functional as F
 
 
 class MixedLoss:
+    """
+    Computes a weighted combination of the losses provided in 'losses' param, with the weights
+    of this combination taken directly from the param 'mixing_params'.
+
+    For example: for adversarial training, Loss = 0.5 * CrossEntropyLoss(x,y,w) + 0.5 * CrossEntropyLoss(^x,y,w)
+    where ^x is the adversarial sample generated from x.
+    
+    """
     def __init__(self, losses, mixing_params: Optional[Iterable[float]]):
         assert isinstance(losses, (list, tuple))
         assert isinstance(mixing_params, (list, tuple, np.ndarray))

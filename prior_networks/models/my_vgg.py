@@ -45,9 +45,10 @@ class MyVGG(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
 
-def make_layers(cfg, batch_norm=False, dropout_rate=0.3, small_inputs=None):
+def make_layers(cfg, batch_norm=False, dropout_rate=0.3, small_inputs=None, **kwargs):
     layers = []
-    in_channels = 3
+    in_channels = kwargs.get('n_channels', 3)
+    print("creating layer with- #channels:", in_channels, "dropout_rate:", dropout_rate)
     dropout_rate = max(dropout_rate - 0.3, 0.2)
     for v in cfg:
         if v == 'M':
@@ -74,7 +75,7 @@ cfgs = {
 def _vgg(arch, cfg, batch_norm, pretrained, progress, dropout_rate=0.3, **kwargs):
     if pretrained:
         kwargs['init_weights'] = False
-    model = MyVGG(make_layers(cfgs[cfg], dropout_rate=dropout_rate, batch_norm=batch_norm), dropout_rate=dropout_rate, **kwargs)
+    model = MyVGG(make_layers(cfgs[cfg], dropout_rate=dropout_rate, batch_norm=batch_norm, **kwargs), dropout_rate=dropout_rate)
     return model
 
 

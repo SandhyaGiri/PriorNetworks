@@ -6,13 +6,17 @@ import pathlib
 from pathlib import Path
 import math
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 
 import torch
 from torch.utils import data
+from torch.utils.data import DataLoader
 from prior_networks.priornet.dpn_losses import DirichletKLLoss, PriorNetMixedLoss
 from prior_networks.util_pytorch import DATASET_DICT, select_gpu
 from prior_networks.priornet.training import TrainerWithOOD
 from prior_networks.util_pytorch import TargetTransform, choose_optimizer
+from prior_networks.plot_util import visualize_data
 from torch import optim
 from prior_networks.datasets.image.standardised_datasets import construct_transforms
 from prior_networks.models.model_factory import ModelFactory
@@ -61,6 +65,8 @@ parser.add_argument('--rotate',
 parser.add_argument('--jitter', type=float, default=0.0,
                     help='Specify how much random color, '
                          'hue, saturation and contrast jitter to apply')
+parser.add_argument('--n_channels', type=int, default=3,
+                    help='Choose number in image channels. Default 3 for color images.')
 parser.add_argument('--normalize',
                     action='store_false',
                     help='Whether to standardize input (x-mu)/std')
@@ -97,6 +103,7 @@ def main():
         print('Using Multi-GPU training.')
     model.to(device)
 
+    print("Args normalize: ", args.normalize) # Needed to ensure that mean, std have right dim / channels as per dataset
     if args.normalize:
         mean = DATASET_DICT[args.id_dataset].mean
         std = DATASET_DICT[args.id_dataset].std
@@ -152,6 +159,11 @@ def main():
 
     # Combine ID and OOD training datasets into a single dataset for
     # training (necessary for DataParallel training)
+    print(len(val_dataset), len(ood_val_dataset))
+    if len(ood_val_dataset) > len(val_dataset):
+        ood_val_dataset= torch.utils.data.random_split(ood_val_dataset, [len(val_dataset), len(ood_val_dataset)-len(val_dataset)])[0]
+
+    print(len(val_dataset), len(ood_val_dataset))
     assert len(val_dataset) == len(ood_val_dataset)
 
     # Even out dataset lengths.
@@ -174,6 +186,9 @@ def main():
     assert len(train_dataset) == len(ood_dataset)
     print(f"Validation dataset length: {len(val_dataset)}")
     print(f"Train dataset length: {len(train_dataset)}")
+
+    # visualize some data
+    visualize_data(ood_dataset, filename='ood')
 
     # Set up training and test criteria
     id_criterion = DirichletKLLoss(target_concentration=args.target_concentration,

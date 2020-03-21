@@ -16,6 +16,7 @@ from prior_networks.datasets import image
 DATASET_DICT = {'MNIST': image.MNIST,
                 'KMNIST': image.KMNIST,
                 'FMNIST': image.FashionMNIST,
+                'OMNIGLOT': image.Omniglot,
                 'EMNIST': image.EMNIST,
                 'SVHN': image.SVHN,
                 'CIFAR10': image.CIFAR10,

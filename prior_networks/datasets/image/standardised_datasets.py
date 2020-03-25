@@ -20,6 +20,7 @@ def construct_transforms(n_in: int,
                          mean: tuple = (0.0, 0.0, 0.0),
                          std: tuple = (1.0, 1.0, 1.0),
                          augment: bool = False,
+                         num_channels: int =3,
                          rotation: bool = False,
                          jitter: float = 0.0):
     """
@@ -71,6 +72,9 @@ def construct_transforms(n_in: int,
         transf_list.extend([transforms.Resize(n_in, Image.BICUBIC),
                             transforms.CenterCrop(n_in)])
 
+    if num_channels < 3:
+        transf_list.extend([transforms.Grayscale(num_output_channels=3)])
+        
     transf_list.extend([transforms.ToTensor(),
                         transforms.Normalize(mean, std)])
 
@@ -78,6 +82,8 @@ def construct_transforms(n_in: int,
 
 
 class MNIST(torchvision.datasets.MNIST):
+    mean = (0.5,)
+    std = (0.5,)
     def __init__(self, root, transform, target_transform, download, split):
         assert split in split_options
         train = False
@@ -147,6 +153,8 @@ class SEMEION(torchvision.datasets.SEMEION):
 
 
 class Omniglot(torchvision.datasets.Omniglot):
+    mean = (0.5,)
+    std = (0.5,)
     def __init__(self, root, transform, target_transform, download, split):
         assert split in split_options
         train = False

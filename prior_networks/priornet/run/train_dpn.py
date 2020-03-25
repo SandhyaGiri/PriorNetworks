@@ -113,6 +113,7 @@ def main():
                                                       std=std,
                                                       augment=args.augment,
                                                       rotation=args.rotate,
+                                                      num_channels=1,
                                                       jitter=args.jitter),
                                                   target_transform=None,
                                                   download=True,
@@ -124,6 +125,7 @@ def main():
                                                     mean=mean,
                                                     std=std,
                                                     mode='eval',
+                                                    num_channels=1,
                                                     rotation=args.rotate,
                                                     jitter=args.jitter),
                                                 target_transform=None,
@@ -136,6 +138,7 @@ def main():
                                                      n_in=ckpt['n_in'],
                                                      mean=mean,
                                                      std=std,
+                                                     num_channels=1,
                                                      mode='ood'),
                                                  target_transform=None,
                                                  download=True,
@@ -145,6 +148,7 @@ def main():
                                                          n_in=ckpt['n_in'],
                                                          mean=mean,
                                                          std=std,
+                                                         num_channels=1,
                                                          mode='eval'),
                                                      target_transform=None,
                                                      download=True,
@@ -152,6 +156,11 @@ def main():
 
     # Combine ID and OOD training datasets into a single dataset for
     # training (necessary for DataParallel training)
+    print(len(val_dataset), len(ood_val_dataset))
+    if len(ood_val_dataset) > len(val_dataset):
+        ood_val_dataset= torch.utils.data.random_split(ood_val_dataset, [len(val_dataset), len(ood_val_dataset)-len(val_dataset)])[0]
+
+    print(len(val_dataset), len(ood_val_dataset))
     assert len(val_dataset) == len(ood_val_dataset)
 
     # Even out dataset lengths.

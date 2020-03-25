@@ -10,6 +10,7 @@ class MyVGG(nn.Module):
 
     def __init__(self, features, num_classes=1000, dropout_rate=0.3, init_weights=True, small_inputs=None):
         super(MyVGG, self).__init__()
+        print("Num classes: ", num_classes)
         self.features = features
         self.avgpool = nn.AdaptiveAvgPool2d((7, 7))
         self.classifier = nn.Sequential(
@@ -75,7 +76,7 @@ cfgs = {
 def _vgg(arch, cfg, batch_norm, pretrained, progress, dropout_rate=0.3, **kwargs):
     if pretrained:
         kwargs['init_weights'] = False
-    model = MyVGG(make_layers(cfgs[cfg], dropout_rate=dropout_rate, batch_norm=batch_norm, **kwargs), dropout_rate=dropout_rate)
+    model = MyVGG(make_layers(cfgs[cfg], dropout_rate=dropout_rate, batch_norm=batch_norm, **kwargs), num_classes=kwargs.get('num_classes', 1000), dropout_rate=dropout_rate)
     return model
 
 

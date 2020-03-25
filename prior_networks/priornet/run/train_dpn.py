@@ -50,8 +50,9 @@ parser.add_argument('--batch_size', type=int, default=128,
                     help='Batch size for training.')
 parser.add_argument('--model_load_path', type=str, default='./model',
                     help='Source where to load the model from.')
-parser.add_argument('--reverse_KL', type=bool, default=True,
-                    help='Whether to use forward or reverse KL. Default is to ALWAYS use reverse KL.')
+parser.add_argument('--reverse_KL',
+                    action='store_true',
+                    help='Whether to use forward or reverse KL. Default is to ALWAYS use forward KL.')
 parser.add_argument('--gpu', type=int, action='append',
                     help='Specify which GPUs to to run on.')
 parser.add_argument('--optimizer', choices=['SGD', 'ADAM'], default='SGD',
@@ -121,6 +122,7 @@ def main():
                                                       mean=mean,
                                                       std=std,
                                                       augment=args.augment,
+                                                      num_channels=args.n_channels,
                                                       rotation=args.rotate,
                                                       jitter=args.jitter),
                                                   target_transform=None,
@@ -134,6 +136,7 @@ def main():
                                                     std=std,
                                                     mode='eval',
                                                     rotation=args.rotate,
+                                                    num_channels=args.n_channels,
                                                     jitter=args.jitter),
                                                 target_transform=None,
                                                 download=True,
@@ -145,6 +148,7 @@ def main():
                                                      n_in=ckpt['n_in'],
                                                      mean=mean,
                                                      std=std,
+                                                     num_channels=args.n_channels,
                                                      mode='ood'),
                                                  target_transform=None,
                                                  download=True,
@@ -154,6 +158,7 @@ def main():
                                                          n_in=ckpt['n_in'],
                                                          mean=mean,
                                                          std=std,
+                                                         num_channels=args.n_channels,
                                                          mode='eval'),
                                                      target_transform=None,
                                                      download=True,

@@ -21,6 +21,7 @@ def construct_transforms(n_in: int,
                          std: tuple = (1.0, 1.0, 1.0),
                          augment: bool = False,
                          rotation: bool = False,
+                         num_channels: int = 3,
                          jitter: float = 0.0):
     """
 
@@ -71,6 +72,9 @@ def construct_transforms(n_in: int,
         transf_list.extend([transforms.Resize(n_in, Image.BICUBIC),
                             transforms.CenterCrop(n_in)])
 
+    if num_channels < 3:
+        transf_list.extend([transforms.Grayscale(num_output_channels=3)])
+    
     transf_list.extend([transforms.ToTensor(),
                         transforms.Normalize(mean, std)])
 

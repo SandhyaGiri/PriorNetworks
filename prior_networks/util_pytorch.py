@@ -173,7 +173,7 @@ def choose_optimizer(optimizer: str, learning_rate: float, weight_decay: float, 
                             'weight_decay': weight_decay}
 
     elif optimizer == 'ADAM':
-        optimizer = optim.AdamW
+        optimizer = optim.Adam
         optimizer_params = {'lr': learning_rate,
                             'betas': (momentum, 0.999),
                             'weight_decay': weight_decay}

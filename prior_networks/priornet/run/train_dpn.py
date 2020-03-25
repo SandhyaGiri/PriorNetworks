@@ -81,6 +81,7 @@ parser.add_argument('--checkpoint_path', type=str, default=None,
 
 def main():
     args = parser.parse_args()
+    print(args.__dict__)
     if not os.path.isdir('CMDs'):
         os.mkdir('CMDs')
     with open('CMDs/step_train_dpn.cmd', 'a') as f:
@@ -92,6 +93,7 @@ def main():
     if checkpoint_path is None:
         checkpoint_path = model_dir / 'model'
     # Check that we are training on a sensible GPU
+    args.gpu = list(map(int, os.environ['SLURM_JOB_GPUS'].split(",")))
     assert max(args.gpu) <= torch.cuda.device_count() - 1
 
     device = select_gpu(args.gpu)
@@ -188,7 +190,7 @@ def main():
     print(f"Train dataset length: {len(train_dataset)}")
 
     # visualize some data
-    visualize_data(ood_dataset, filename='ood')
+    # visualize_data(ood_dataset, filename='ood')
 
     # Set up training and test criteria
     id_criterion = DirichletKLLoss(target_concentration=args.target_concentration,

@@ -1,0 +1,28 @@
+
+seml:
+  executable: 'trainer_seml.py'
+  db_collection: 'priornet'
+  output_dir: '~/logs'
+
+slurm:
+  name: 'dirchletpriornet'
+  experiments_per_job: 1
+  sbatch_options:
+    gres: gpu:1
+    mem:  8G
+    cpus-per-task: 2
+    time: 0-08:00
+    partition: gpu_all
+
+fixed:
+  in_domain_dataset: MNIST
+  ood_dataset: OMNIGLOT
+  num_epochs: 10
+  num_channels: 1
+  learning_rate: 0.0001
+  model_dir: "./runtime-model"
+  data_dir: "./runtime-data"
+  train_file: "./priornet/run/train_dpn.py"
+  lr_decay_milestones: [4,8]
+  logdir: "/nfs/homedirs/giri/priornet/logs"
+  

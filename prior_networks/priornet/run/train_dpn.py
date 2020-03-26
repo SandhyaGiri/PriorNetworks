@@ -94,7 +94,8 @@ def main():
     if checkpoint_path is None:
         checkpoint_path = model_dir / 'model'
     # Check that we are training on a sensible GPU
-    args.gpu = list(map(int, os.environ['SLURM_JOB_GPUS'].split(",")))
+    if os.environ.get('SLURM_JOB_GPUS'):
+        args.gpu = list(map(int, os.environ['SLURM_JOB_GPUS'].split(",")))
     assert max(args.gpu) <= torch.cuda.device_count() - 1
 
     device = select_gpu(args.gpu)

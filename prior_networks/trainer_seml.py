@@ -19,7 +19,7 @@ def config():
 
 
 @ex.automain
-def run(in_domain_dataset, ood_dataset, num_epochs, num_channels, learning_rate, model_dir, data_dir, lr_decay_milestones, train_file, batch_size, logdir):
+def run(in_domain_dataset, ood_dataset, input_image_size, num_classes, model_arch, num_epochs, num_channels, learning_rate, drop_rate, model_dir, data_dir, lr_decay_milestones, train_file, setup_file, batch_size, logdir):
 
     logging.info('Received the following configuration:')
     logging.info(f'In domain dataset: {in_domain_dataset}, OOD dataset: {ood_dataset}')
@@ -28,10 +28,16 @@ def run(in_domain_dataset, ood_dataset, num_epochs, num_channels, learning_rate,
     cuda_devices = os.environ['SLURM_JOB_GPUS']
     logging.info(f"GPUs assigned to me: {cuda_devices}")
 
+    # set up the model
+    setup_cmd = f'python {setup_file} --arch {model_arch} --n_channels 3 --drop_rate {drop_rate} --override_directory {model_dir} {input_image_size} {num_classes}'
+    logging.info(f"Setup command being executed: {setup_cmd}")
+    os.system(setup_cmd)
+
+    # training the model
     lr_decay_milestones = " ".join(map(lambda epoch: "--lrc " + str(epoch), lr_decay_milestones))
-    cmd = f'python {train_file} {lr_decay_milestones} --model_dir {model_dir} --normalize --n_channels {num_channels} --batch_size {batch_size} {data_dir} {in_domain_dataset} {ood_dataset} {num_epochs} {learning_rate}'
-    logging.info(f"Command being executed: {cmd}")
-    os.system(cmd)    
+    train_cmd = f'python {train_file} {lr_decay_milestones} --model_dir {model_dir} --normalize --n_channels {num_channels} --batch_size {batch_size} {data_dir} {in_domain_dataset} {ood_dataset} {num_epochs} {learning_rate}'
+    logging.info(f"Training command being executed: {train_cmd}")
+    os.system(train_cmd)    
 
     results = {
         'test_acc': 0.5 + 0.3 * np.random.randn(),

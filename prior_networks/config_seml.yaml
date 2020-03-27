@@ -16,13 +16,18 @@ slurm:
 
 fixed:
   in_domain_dataset: MNIST
+  input_image_size: 28
+  num_classes: 10
   ood_dataset: OMNIGLOT
+  model_arch: myvgg16
   num_epochs: 1
   num_channels: 1
   learning_rate: 0.0001
+  drop_rate: 0.95
   model_dir: "./runtime-model"
   data_dir: "./runtime-data"
   train_file: "./priornet/run/train_dpn.py"
+  setup_file: "./priornet/setup/setup_dpn.py"
   lr_decay_milestones: [1]
   batch_size: 1
   logdir: "/nfs/homedirs/giri/priornet/logs"

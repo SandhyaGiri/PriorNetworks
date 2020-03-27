@@ -94,18 +94,21 @@ def main():
     if checkpoint_path is None:
         checkpoint_path = model_dir / 'model'
     # Check that we are training on a sensible GPU
-    if os.environ.get('SLURM_JOB_GPUS'):
+    if os.environ.get('SLURM_JOB_GPUS', None) is not None:
         args.gpu = list(map(int, os.environ['SLURM_JOB_GPUS'].split(",")))
-    assert max(args.gpu) <= torch.cuda.device_count() - 1
+    
+    if torch.cuda.is_available():
+        assert len(args.gpu) <= torch.cuda.device_count()
 
-    device = select_gpu(args.gpu)
     # Load up the model
-    ckpt = torch.load(model_dir / 'model/model.tar', map_location=device)
+    ckpt = torch.load(model_dir / 'model/model.tar')
     model = ModelFactory.model_from_checkpoint(ckpt)
     if len(args.gpu) > 1 and torch.cuda.device_count() > 1:
         model = torch.nn.DataParallel(model, device_ids=args.gpu)
         print('Using Multi-GPU training.')
-    model.to(device)
+    else:
+        device = select_gpu(args.gpu)
+        model.to(device)
 
     print("Args normalize: ", args.normalize) # Needed to ensure that mean, std have right dim / channels as per dataset
     if args.normalize:

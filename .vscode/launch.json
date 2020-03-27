@@ -1,0 +1,22 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: train_dpn.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/prior_networks/priornet/run/train_dpn.py",
+            "args" : ["--gpu", "-1", "--lrc", "1", "--n_channels", "1", "--batch_size", "1","--model_dir", "/Users/sandhyagiri/git/PriorNetworks/prior_networks/runtime-model", "--normalize", "/Users/sandhyagiri/git/PriorNetworks/prior_networks/runtime-data","MNIST", "OMNIGLOT", "1", " 0.001"]
+        }
+    ]
+}

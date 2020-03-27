@@ -83,8 +83,8 @@ def select_device(device_name):
 
 def select_gpu(gpu_id: list):
     if torch.cuda.is_available() and len(gpu_id) > 0:
-        assert torch.cuda.device_count() > max(gpu_id)
-        device = torch.device(f"cuda:{gpu_id[0]}")
+        assert torch.cuda.device_count() >= len(gpu_id)
+        device = torch.device("cuda:0")
         print(f"Using device: {torch.cuda.get_device_name(device)} unit {gpu_id[0]}.")
     else:
         print(f"Using CPU device.")

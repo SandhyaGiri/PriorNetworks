@@ -145,6 +145,8 @@ def dirichlet_kl_divergence(alphas, target_alphas, precision=None, target_precis
         target_precision = torch.sum(target_alphas, dim=1, keepdim=True)
 
     precision_term = torch.lgamma(target_precision) - torch.lgamma(precision)
+    if torch.all(torch.isfinite(precision_term)).item() == 0:
+        print(precision_term)
     assert torch.all(torch.isfinite(precision_term)).item()
     alphas_term = torch.sum(torch.lgamma(alphas + epsilon) - torch.lgamma(target_alphas + epsilon)
                             + (target_alphas - alphas) * (torch.digamma(target_alphas + epsilon)

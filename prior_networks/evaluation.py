@@ -10,7 +10,7 @@ from typing import Optional, Tuple
 
 def eval_logits_on_dataset(model: nn.Module, dataset: Dataset, batch_size: int = 128,
                            device: Optional[torch.device] = None,
-                           num_workers: int = 4) -> Tuple[torch.tensor, torch.tensor]:
+                           num_workers: int = 4):
     """
     Takes a model and an evaluation dataset, and returns the logits
     output by the model on that dataset as an array

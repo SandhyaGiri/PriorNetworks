@@ -17,12 +17,13 @@ slurm:
 fixed:
   in_domain_dataset: MNIST
   ood_dataset: OMNIGLOT
-  num_epochs: 10
+  num_epochs: 1
   num_channels: 1
   learning_rate: 0.0001
   model_dir: "./runtime-model"
   data_dir: "./runtime-data"
   train_file: "./priornet/run/train_dpn.py"
-  lr_decay_milestones: [4,8]
+  lr_decay_milestones: [1]
+  batch_size: 1
   logdir: "/nfs/homedirs/giri/priornet/logs"
   

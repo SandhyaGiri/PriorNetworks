@@ -19,7 +19,7 @@ def config():
 
 
 @ex.automain
-def run(in_domain_dataset, ood_dataset, num_epochs, num_channels, learning_rate, model_dir, data_dir, lr_decay_milestones, train_file, logdir):
+def run(in_domain_dataset, ood_dataset, num_epochs, num_channels, learning_rate, model_dir, data_dir, lr_decay_milestones, train_file, batch_size, logdir):
 
     logging.info('Received the following configuration:')
     logging.info(f'In domain dataset: {in_domain_dataset}, OOD dataset: {ood_dataset}')
@@ -29,7 +29,7 @@ def run(in_domain_dataset, ood_dataset, num_epochs, num_channels, learning_rate,
     logging.info(f"GPUs assigned to me: {cuda_devices}")
 
     lr_decay_milestones = " ".join(map(lambda epoch: "--lrc " + str(epoch), lr_decay_milestones))
-    cmd = f'python {train_file} {lr_decay_milestones} --model_dir {model_dir} --n_channels {num_channels} {data_dir} {in_domain_dataset} {ood_dataset} {num_epochs} {learning_rate}'
+    cmd = f'python {train_file} {lr_decay_milestones} --model_dir {model_dir} --normalize --n_channels {num_channels} --batch_size {batch_size} {data_dir} {in_domain_dataset} {ood_dataset} {num_epochs} {learning_rate}'
     logging.info(f"Command being executed: {cmd}")
     os.system(cmd)    
 

@@ -87,6 +87,7 @@ class DirichletKLLoss:
         self.reverse = reverse
 
     def __call__(self, logits, labels, reduction='mean'):
+        logits = logits - torch.max(logits, dim=0)[0] # numerically stable softmax 
         alphas = torch.exp(logits)
         return self.forward(alphas, labels, reduction=reduction)
 

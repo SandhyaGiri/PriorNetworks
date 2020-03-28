@@ -74,7 +74,7 @@ class TrainerWithOOD(Trainer):
                 zip(self.trainloader, self.oodloader), 0):
             # Get inputs
             inputs, labels = data
-            print(f"index:{i}, input: {inputs.shape}, labels: {labels}")
+            # print(f"index:{i}, input: {inputs.shape}, labels: {labels}")
             ood_inputs, _ = ood_data
             if self.device is not None:
                 # Move data to adequate device

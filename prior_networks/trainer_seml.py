@@ -39,9 +39,9 @@ def run(in_domain_dataset, ood_dataset, input_image_size, num_classes, model_arc
     logging.info(f"Training command being executed: {train_cmd}")
     os.system(train_cmd)    
 
-    results = {
-        'test_acc': 0.5 + 0.3 * np.random.randn(),
-        'test_loss': np.random.uniform(0, 10)
-    }
+    # recover the logs from model_dir/log/LOG.txt file and return
+    with open(f'{model_dir}/LOG.txt', 'r') as f:
+        results = f.read()
+    
     # the returned result will be written into the database
     return results

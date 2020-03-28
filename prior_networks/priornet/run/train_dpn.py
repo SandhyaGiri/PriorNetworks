@@ -235,7 +235,8 @@ def main():
                              optimizer_params=optimizer_params,
                              scheduler_params={'milestones': lrc, 'gamma': args.lr_decay},
                              batch_size=args.batch_size,
-                             clip_norm=args.clip_norm)
+                             clip_norm=args.clip_norm,
+                             log_dir=model_dir)
     if args.resume:
         try:
             trainer.load_checkpoint(True, True, map_location=device)

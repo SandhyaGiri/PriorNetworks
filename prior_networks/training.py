@@ -26,7 +26,8 @@ class Trainer:
                  num_workers=4,
                  pin_memory=False,
                  checkpoint_path='./',
-                 checkpoint_steps=0):
+                 checkpoint_steps=0,
+                 log_dir='.'):
         assert isinstance(model, nn.Module)
         assert isinstance(train_dataset, Dataset)
         assert isinstance(test_dataset, Dataset)
@@ -41,6 +42,7 @@ class Trainer:
         self.checkpoint_steps = checkpoint_steps
         self.batch_size = batch_size
         self.clip_norm = clip_norm
+        self.log_dir = log_dir
         if test_criterion is not None:
             self.test_criterion = test_criterion
         else:
@@ -93,7 +95,7 @@ class Trainer:
             snap.dump_snapshot()
             print('Checkpoint saved to snapshots.')
         except Exception:
-            print('Checkpoint NOT save to snapshots!')
+            print('Checkpoint NOT saved to snapshots!')
             pass
 
     def load_checkpoint(self, load_opt_state=False, load_scheduler_state=False, map_location=None):

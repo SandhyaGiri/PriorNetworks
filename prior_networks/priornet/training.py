@@ -34,7 +34,8 @@ class TrainerWithOOD(Trainer):
                  clip_norm: float = 10.0,
                  pin_memory=False,
                  checkpoint_path='./',
-                 checkpoint_steps=0):
+                 checkpoint_steps=0,
+                 log_dir='.'):
         super().__init__(model=model,
                          criterion=criterion,
                          train_dataset=train_dataset,
@@ -51,7 +52,8 @@ class TrainerWithOOD(Trainer):
                          pin_memory=pin_memory,
                          clip_norm=clip_norm,
                          checkpoint_path=checkpoint_path,
-                         checkpoint_steps=checkpoint_steps)
+                         checkpoint_steps=checkpoint_steps,
+                         log_dir=log_dir)
 
         assert len(train_dataset) == len(ood_dataset)
         assert len(test_dataset) == len(test_ood_dataset)
@@ -138,7 +140,7 @@ class TrainerWithOOD(Trainer):
               f"Train ID precision: {np.round(id_alpha_0, 1)}; "
               f"Train OOD precision: {np.round(ood_alpha_0, 1)}")
 
-        with open('./LOG.txt', 'a') as f:
+        with open(f'{self.log_dir}/LOG.txt', 'a') as f:
             f.write(f"Train ID Loss: {np.round(id_loss, 1)}; "
                     f"Train OOD Loss: {np.round(ood_loss, 1)}; "
                     f"Train Error: {np.round(100.0 * (1.0 - accuracies), 1)}; "
@@ -211,7 +213,7 @@ class TrainerWithOOD(Trainer):
               f"Test AUROC: {np.round(100.0 * auc, 1)}; "
               f"Time Per Epoch: {np.round(time / 60.0, 1)} min")
 
-        with open('./LOG.txt', 'a') as f:
+        with open(f'{self.log_dir}/LOG.txt', 'a') as f:
             f.write(f"Test ID Loss: {np.round(id_loss, 1)}; "
                     f"Test OOD Loss: {np.round(ood_loss, 1)}; "
                     f"Test Error: {np.round(100.0 * (1.0 - accuracy), 1)}; "
@@ -246,7 +248,8 @@ class TrainerWithAdv(Trainer):
                  pin_memory=False,
                  num_workers=4,
                  checkpoint_path='./',
-                 checkpoint_steps=0):
+                 checkpoint_steps=0,
+                 log_dir="."):
         super().__init__(model=model,
                          criterion=criterion,
                          train_dataset=train_dataset,
@@ -263,7 +266,8 @@ class TrainerWithAdv(Trainer):
                          num_workers=num_workers,
                          pin_memory=pin_memory,
                          checkpoint_path=checkpoint_path,
-                         checkpoint_steps=checkpoint_steps)
+                         checkpoint_steps=checkpoint_steps,
+                         log_dir=log_dir)
 
         self.nat_criterion = test_criterion
         self.adv_criterion = adv_criterion
@@ -391,7 +395,7 @@ class TrainerWithAdv(Trainer):
               f"Train Adv Error: {np.round(100.0 * (1.0 - adv_accuracy), 1)}; "
               f"Train Nat Prec: {np.round(nat_alpha_0, 1)}; "
               f"Train Adv Prec: {np.round(adv_alpha_0, 1)};")
-        with open('./LOG.txt', 'a') as f:
+        with open(f'{self.log_dir}/LOG.txt', 'a') as f:
             f.write(f"Train Nat Loss: {np.round(nat_loss, 1)}; "
                     f"Train Adv Loss: {np.round(adv_loss, 1)}; "
                     f"Train Nat Error: {np.round(100.0 * (1.0 - nat_accuracy), 1)}; "

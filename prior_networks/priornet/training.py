@@ -111,9 +111,11 @@ class TrainerWithOOD(Trainer):
             # Update the number of steps
             self.steps += 1
 
-            # log statistics
-            id_alpha_0 += torch.mean(torch.sum(torch.exp(id_outputs), dim=1)).item()
-            ood_alpha_0 += torch.mean(torch.sum(torch.exp(ood_outputs), dim=1)).item()
+            # log statistics (avoiding overflows!)
+            id_alphas = torch.exp(id_outputs - torch.max(id_outputs, dim=0)[0]) 
+            id_alpha_0 += torch.mean(torch.sum(id_alphas, dim=1)).item()
+            ood_alphas = torch.exp(ood_outputs - torch.max(ood_outputs, dim=0)[0])
+            ood_alpha_0 += torch.mean(torch.sum(ood_alphas, dim=1)).item()
 
             probs = F.softmax(id_outputs, dim=1)
             accuracy = calc_accuracy_torch(probs, labels, self.device).item()
@@ -128,6 +130,7 @@ class TrainerWithOOD(Trainer):
                 if self.steps % self.checkpoint_steps == 0:
                     self._save_checkpoint(save_at_steps=True)
 
+        # normalizing the accumulated values through the epoch
         accuracies /= len(self.trainloader)
         id_loss /= len(self.trainloader)
         ood_loss /= len(self.trainloader)
@@ -178,9 +181,11 @@ class TrainerWithOOD(Trainer):
                 id_loss += self.id_criterion(id_outputs, labels).item()
                 ood_loss += self.ood_criterion(ood_outputs, None).item()
 
-                # Get in-domain and OOD Precision
-                id_alpha_0 += torch.mean(torch.sum(torch.exp(id_outputs), dim=1)).item()
-                ood_alpha_0 += torch.mean(torch.sum(torch.exp(ood_outputs), dim=1)).item()
+                # Get in-domain and OOD Precision (numerically stable way!)
+                id_alphas = torch.exp(id_outputs - torch.max(id_outputs, dim=0)[0]) 
+                id_alpha_0 += torch.mean(torch.sum(id_alphas, dim=1)).item()
+                ood_alphas = torch.exp(ood_outputs - torch.max(ood_outputs, dim=0)[0])
+                ood_alpha_0 += torch.mean(torch.sum(ood_alphas, dim=1)).item()
 
                 # Append logits for future OOD detection at test time calculation...
                 id_logits.append(id_outputs.cpu().numpy())

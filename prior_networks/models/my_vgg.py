@@ -7,7 +7,9 @@ __all__ = [
 
 
 class MyVGG(nn.Module):
-
+    """
+    Slight Modification of original VGG with custom dropout rate for the dropout layers + leaky reLU instead of normal reLU.
+    """
     def __init__(self, features, num_classes=1000, dropout_rate=0.3, init_weights=True, small_inputs=None):
         super(MyVGG, self).__init__()
         print("Num classes: ", num_classes)

@@ -131,10 +131,22 @@ class Trainer:
             start = time.time()
             self._train_single_epoch()
             self._save_checkpoint()
+            # self._write_parameters(epoch)
             # Test
             self.test(time=time.time() - start)
             self.scheduler.step()
         return
+
+    def _write_parameters(self, epoch_num):
+        params = []
+        for name, param in self.model.named_parameters():
+            if param.requires_grad:
+                params.append(name)
+                params.append(param.data)
+        f = open(f"epoch{epoch_num}-params.txt", "w")
+        f.write(str(params))
+        # print("requires grad of features.0.weights: ", list(self.model.parameters())[0].requires_grad)
+        # print("gradient of loss wrto features.0.weights: ", list(self.model.parameters())[0].grad)
 
     def _train_single_epoch(self):
 

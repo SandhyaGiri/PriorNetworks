@@ -34,7 +34,7 @@ parser.add_argument('n_epochs', type=int,
                     help='How many epochs to train for.')
 parser.add_argument('lr', type=float,
                     help='Initial learning rate.')
-parser.add_argument('--lr_decay', type=float, default=0.2, help='LR decay multiplies')
+parser.add_argument('--lr_decay', type=float, default=0.95, help='LR decay multiplies')
 parser.add_argument('--lrc', action='append', type=int, help='LR decay milestones')
 parser.add_argument('--model_dir', type=str, default='./',
                     help='absolute directory path where to save model and associated data.')
@@ -132,6 +132,8 @@ def main():
                                                   target_transform=None,
                                                   download=True,
                                                   split='train')
+    # take 1 training sample
+    # train_dataset = torch.utils.data.random_split(train_dataset, [100, len(train_dataset)-100])[0]
 
     val_dataset = DATASET_DICT[args.id_dataset](root=args.data_path,
                                                 transform=construct_transforms(
@@ -145,6 +147,7 @@ def main():
                                                 target_transform=None,
                                                 download=True,
                                                 split='val')
+    # val_dataset = torch.utils.data.random_split(val_dataset, [100, len(val_dataset)-100])[0]
 
     # Load the out-of-domain training dataset
     ood_dataset = DATASET_DICT[args.ood_dataset](root=args.data_path,
@@ -157,6 +160,7 @@ def main():
                                                  target_transform=None,
                                                  download=True,
                                                  split='train')
+    # ood_dataset = torch.utils.data.random_split(ood_dataset, [100, len(ood_dataset)-100])[0]
     ood_val_dataset = DATASET_DICT[args.ood_dataset](root=args.data_path,
                                                      transform=construct_transforms(
                                                          n_in=ckpt['n_in'],
@@ -167,6 +171,7 @@ def main():
                                                      target_transform=None,
                                                      download=True,
                                                      split='val')
+    # ood_val_dataset = torch.utils.data.random_split(ood_val_dataset, [100, len(ood_val_dataset)-100])[0]
 
     # Combine ID and OOD training datasets into a single dataset for
     # training (necessary for DataParallel training)
@@ -231,9 +236,9 @@ def main():
                              optimizer=optimizer,
                              device=device,
                              checkpoint_path=checkpoint_path,
-                             scheduler=optim.lr_scheduler.MultiStepLR,
+                             scheduler=optim.lr_scheduler.ExponentialLR,
                              optimizer_params=optimizer_params,
-                             scheduler_params={'milestones': lrc, 'gamma': args.lr_decay},
+                             scheduler_params={'gamma': args.lr_decay},
                              batch_size=args.batch_size,
                              clip_norm=args.clip_norm,
                              log_dir=model_dir)

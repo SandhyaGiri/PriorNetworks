@@ -35,6 +35,8 @@ parser.add_argument('--model_dir', type=str, default='./',
                     help='absolute directory path where to save model and associated data.')
 parser.add_argument('--gpu', type=int, action='append',
                     help='Specify which GPUs to to run on.')
+parser.add_argument('--n_channels', type=int, default=3,
+                    help='Choose number in image channels. Default 3 for color images.')
 parser.add_argument('--train', action='store_true',
                     help='Whether to evaluate on the training data instead of test data')
 parser.add_argument('--ood', action='store_true',
@@ -72,6 +74,7 @@ def main():
     if args.train:
         dataset = DATASET_DICT[args.dataset](root=args.data_path,
                                              transform=construct_transforms(n_in=ckpt['n_in'],
+                                                                            num_channels=args.n_channels,
                                                                             mean=DATASET_DICT[args.dataset].mean,
                                                                             std=DATASET_DICT[args.dataset].std,
                                                                             mode='train'),
@@ -81,6 +84,7 @@ def main():
     else:
         dataset = DATASET_DICT[args.dataset](root=args.data_path,
                                              transform=construct_transforms(n_in=ckpt['n_in'],
+                                                                            num_channels=args.n_channels,
                                                                             mean=DATASET_DICT[args.dataset].mean,
                                                                             std=DATASET_DICT[args.dataset].std,
                                                                             mode='eval'),

@@ -35,7 +35,7 @@ def run(in_domain_dataset, ood_dataset, input_image_size, num_classes, model_arc
 
     # training the model
     lr_decay_milestones = " ".join(map(lambda epoch: "--lrc " + str(epoch), lr_decay_milestones))
-    train_cmd = f'python {train_file} {lr_decay_milestones} --model_dir {model_dir} --normalize --optimizer ADAM --n_channels {num_channels} --batch_size {batch_size} {data_dir} {in_domain_dataset} {ood_dataset} {num_epochs} {learning_rate}'
+    train_cmd = f'python {train_file} {lr_decay_milestones} --model_dir {model_dir} --normalize --reverse_KL --optimizer ADAM --n_channels {num_channels} --batch_size {batch_size} {data_dir} {in_domain_dataset} {ood_dataset} {num_epochs} {learning_rate}'
     logging.info(f"Training command being executed: {train_cmd}")
     os.system(train_cmd)    
 

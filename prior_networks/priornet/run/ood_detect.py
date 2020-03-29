@@ -35,6 +35,8 @@ parser.add_argument('--model_dir', type=str, default='./',
                     help='absolute directory path where to save model and associated data.')
 parser.add_argument('--batch_size', type=int, default=256,
                     help='Batch size for processing')
+parser.add_argument('--n_channels', type=int, default=3,
+                    help='Choose number in image channels. Default 3 for color images.')
 parser.add_argument('--gpu', type=int, action='append',
                     help='Specify which GPUs to to run on.')
 parser.add_argument('--overwrite', action='store_true',
@@ -72,6 +74,7 @@ def main():
                                                transform=construct_transforms(n_in=ckpt['n_in'],
                                                                               mean=DATASET_DICT[args.id_dataset].mean,
                                                                               std=DATASET_DICT[args.id_dataset].std,
+                                                                              num_channels=args.n_channels,
                                                                               mode='eval'),
                                                target_transform=None,
                                                download=True,
@@ -81,6 +84,7 @@ def main():
                                                  transform=construct_transforms(n_in=ckpt['n_in'],
                                                                                 mean=DATASET_DICT[args.id_dataset].mean,
                                                                                 std=DATASET_DICT[args.id_dataset].std,
+                                                                                num_channels=args.n_channels,
                                                                                 mode='eval'),
                                                  target_transform=None,
                                                  download=True,

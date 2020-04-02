@@ -12,6 +12,7 @@ import torch.utils.data
 from torch.utils.data import Dataset, DataLoader
 
 import matplotlib
+import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
 from pathlib import Path
@@ -112,6 +113,53 @@ def construct_adversarial_dataset(model: nn.Module, epsilon, dataset: Dataset, b
 
     return logits.cpu(), labels.cpu(), adv.cpu()
 
+def perform_epsilon_attack(model, epsilon, dataset, batch_size, device, n_channels, output_path, mean, std):
+    assert 0 < epsilon <= 255
+
+    epsilon = float(epsilon) / 255
+    
+    logits, labels, images = construct_adversarial_dataset(model=model,
+                                                           dataset=dataset,
+                                                           epsilon=epsilon,
+                                                           batch_size=batch_size,
+                                                           device=device)
+    labels, probs, logits = labels.numpy(), F.softmax(logits, dim=1).numpy(), logits.numpy()
+    images = images.numpy()
+    print(images.shape)
+
+    # Images to be in [-1, 1] interval, so rescale them back to [0, 1].
+    images= np.asarray((images*std + mean)*255.0, dtype=np.uint8)
+
+    # Save model outputs
+    np.savetxt(os.path.join(output_path, 'labels.txt'), labels)
+    np.savetxt(os.path.join(output_path, 'probs.txt'), probs)
+    np.savetxt(os.path.join(output_path, 'logits.txt'), logits)
+
+    for i, image in enumerate(images):
+        if n_channels == 1:
+            # images were added new channels (3) to go through VGG, so remove unnecessary channels
+            Image.fromarray(image[0,:,:]).save(os.path.join(output_path, f"{i}.png"))
+        else:
+            Image.fromarray(image).save(output_path / f"{i}.png")
+
+    # Get dictionary of uncertainties.
+    uncertainties = dirichlet_prior_network_uncertainty(logits)
+
+    # Save uncertainties
+    for key in uncertainties.keys():
+        np.savetxt(os.path.join(output_path, key + '.txt'), uncertainties[key])
+
+    nll = -np.mean(np.log(probs[np.arange(probs.shape[0]), np.squeeze(labels)] + 1e-10))
+
+    accuracy = np.mean(np.asarray(labels == np.argmax(probs, axis=1), dtype=np.float32))
+    with open(os.path.join(output_path, 'results.txt'), 'a') as f:
+        f.write(f'Classification Error: {np.round(100 * (1.0 - accuracy), 1)} \n')
+        f.write(f'NLL: {np.round(nll, 3)} \n')
+
+    # Assess Misclassification Detection
+    eval_misc_detect(labels, probs, uncertainties, save_path=output_path, misc_positive=True)
+
+    return accuracy
 
 def main():
     args = parser.parse_args()
@@ -138,10 +186,6 @@ def main():
     model.to(device)
     model.eval()
 
-    assert 0 < args.epsilon <= 255
-
-    epsilon = float(args.epsilon) / 255
-
     # Load the in-domain evaluation data
     if args.train:
         dataset = DATASET_DICT[args.dataset](root=args.data_path,
@@ -163,54 +207,48 @@ def main():
                                              target_transform=None,
                                              download=True,
                                              split='test')
-    # dataset = DataSpliter.reduceSize(dataset, 10)
-
-    # Evaluate the model
-    logits, labels, images = construct_adversarial_dataset(model=model,
-                                                           dataset=dataset,
-                                                           epsilon=epsilon,
-                                                           batch_size=args.batch_size,
-                                                           device=device)
-
-
-    labels, probs, logits = labels.numpy(), F.softmax(logits, dim=1).numpy(), logits.numpy()
-    images = images.numpy()
-    print(images.shape)
-
+    
     mean = np.array(DATASET_DICT[args.dataset].mean).reshape((3, 1, 1))
     std = np.array(DATASET_DICT[args.dataset].std).reshape((3, 1, 1))
 
-    # Images to be in [-1, 1] interval, so rescale them back to [0, 1].
-    images= np.asarray((images*std + mean)*255.0, dtype=np.uint8)
+    attack_images = 10 
+    image_indices = []
+    # pick number of successfully classified images by the model, equal to #attack_images
+    test_loader = DataLoader(dataset, batch_size=1, shuffle=False)
 
-    # Save model outputs
-    np.savetxt(os.path.join(args.output_path, 'labels.txt'), labels)
-    np.savetxt(os.path.join(args.output_path, 'probs.txt'), probs)
-    np.savetxt(os.path.join(args.output_path, 'logits.txt'), logits)
+    for i, inputs in enumerate(test_loader):
+        # check if model classifies 
+        image, label = inputs
+        logits = model(image)
+        probs = F.log_softmax(logits, dim=1)
+        pred = probs.max(1, keepdim=True)[1] # get the index of the max log-probability
 
-    for i, image in enumerate(images):
-        if args.n_channels == 1:
-            # images were added new channels (3) to go through VGG, so remove unnecessary channels
-            Image.fromarray(image[0,:,:]).save(os.path.join(args.output_path, f"{i}.png"))
-        else:
-            Image.fromarray(image).save(args.output_path / f"{i}.png")
+        if pred.item() == label.item():
+            image_indices.append(i)
 
-    # Get dictionary of uncertainties.
-    uncertainties = dirichlet_prior_network_uncertainty(logits)
-    # Save uncertainties
-    for key in uncertainties.keys():
-        np.savetxt(os.path.join(args.output_path, key + '.txt'), uncertainties[key])
+        if len(image_indices) == attack_images:
+            break
+    
+    dataset = torch.utils.data.Subset(dataset, image_indices)
+    print("dataset length:", len(dataset))
 
-    nll = -np.mean(np.log(probs[np.arange(probs.shape[0]), np.squeeze(labels)] + 1e-10))
-
-    accuracy = np.mean(np.asarray(labels == np.argmax(probs, axis=1), dtype=np.float32))
-    with open(os.path.join(args.output_path, 'results.txt'), 'a') as f:
-        f.write(f'Classification Error: {np.round(100 * (1.0 - accuracy), 1)} \n')
-        f.write(f'NLL: {np.round(nll, 3)} \n')
-
-    # Assess Misclassification Detection
-    eval_misc_detect(labels, probs, uncertainties, save_path=args.output_path, misc_positive=True)
-
+    accuracies = []
+    epsilons = [1,5,10,15]
+    for epsilon in epsilons:
+        out_path = os.path.join(args.output_path, f"e{epsilon}-attack")
+        os.makedirs(out_path)
+        accuracy = perform_epsilon_attack(model, epsilon, dataset, args.batch_size, device, args.n_channels,out_path, mean, std)
+        accuracies.append(accuracy)
+    
+    # plot the epsilon, accuracy graph (line plot)
+    plt.figure(figsize=(5,5))
+    plt.plot(epsilons, accuracies, "*-")
+    plt.yticks(np.arange(0, 1.1, step=0.1))
+    plt.xticks(np.arange(1, 20, step=5))
+    plt.title("Accuracy vs Epsilon")
+    plt.xlabel("Epsilon")
+    plt.ylabel("Accuracy")
+    plt.savefig(os.path.join(args.output_path, "epsilon-curve.png"))
 
 if __name__ == '__main__':
     main()

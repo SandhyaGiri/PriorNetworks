@@ -14,6 +14,7 @@ import torch.nn.functional as F
 from prior_networks.assessment.ood_detection import eval_ood_detect
 from prior_networks.evaluation import eval_logits_on_dataset
 from prior_networks.datasets.image import construct_transforms
+from prior_networks.datasets.image.dataspliter import DataSpliter
 from prior_networks.priornet.dpn import dirichlet_prior_network_uncertainty
 from prior_networks.util_pytorch import DATASET_DICT, select_gpu
 from prior_networks.models.model_factory import ModelFactory
@@ -79,6 +80,7 @@ def main():
                                                target_transform=None,
                                                download=True,
                                                split='test')
+    # id_dataset = DataSpliter.reduceSize(id_dataset, 10)
 
     ood_dataset = DATASET_DICT[args.ood_dataset](root=args.data_path,
                                                  transform=construct_transforms(n_in=ckpt['n_in'],
@@ -89,6 +91,7 @@ def main():
                                                  target_transform=None,
                                                  download=True,
                                                  split='test')
+    # ood_dataset = DataSpliter.reduceSize(ood_dataset, 10)
     print(f"ID dataset length: {len(id_dataset)}, OOD dataset length: {len(ood_dataset)}")
 
 
@@ -126,6 +129,8 @@ def main():
         np.savetxt(os.path.join(args.output_path, key + '_ood.txt'), ood_uncertainties[key])
 
     # Compute Labels
+    # For OOD detection task, we have a binary classification problem at hand, where label=0 indicates in-domain sample and
+    # label=1 indicates ood sample.
     in_domain = np.zeros_like(id_labels)
     out_domain = np.ones_like(ood_labels)
     domain_labels = np.concatenate((in_domain, out_domain), axis=0)

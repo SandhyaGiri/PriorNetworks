@@ -139,7 +139,7 @@ def main():
     else:
         dataset = DATASET_DICT[args.dataset](root=args.data_path,
                                              transform=construct_transforms(n_in=ckpt['n_in'],
-                                                                            mean=,
+                                                                            mean=DATASET_DICT[args.dataset].mean,
                                                                             std=DATASET_DICT[args.dataset].std,
                                                                             mode='eval'),
                                              target_transform=None,

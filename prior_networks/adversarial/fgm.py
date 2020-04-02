@@ -16,7 +16,9 @@ def construct_fgm_attack(model,
     with torch.enable_grad():
         outputs = model(adv_inputs)
 
-        epsilon = epsilon.view([outputs.size()[0], 1, 1, 1])
+        epsilon = torch.ones([outputs.size()[0]]) * epsilon
+        epsilon = epsilon.view([epsilon.size()[0], 1, 1, 1])
+
 
         if device is not None:
             epsilon = epsilon.to(device, non_blocking=pin_memory)

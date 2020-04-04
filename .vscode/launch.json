@@ -37,7 +37,7 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/prior_networks/adversarial/confidence_fgsm_attack.py",
-            "args" : ["--gpu", "-1", "--batch_size", "2","--n_channels", "1", "--model_dir", "/Users/sandhyagiri/git/PriorNetworks/prior_networks/runtime-model1", "/Users/sandhyagiri/git/PriorNetworks/prior_networks/runtime-data","MNIST", "/Users/sandhyagiri/git/PriorNetworks/prior_networks/runtime-out2", "13"]
+            "args" : ["--gpu", "-1", "--batch_size", "2","--n_channels", "1", "--model_dir", "/Users/sandhyagiri/git/PriorNetworks/prior_networks/runtime-model1", "/Users/sandhyagiri/git/PriorNetworks/prior_networks/runtime-data", "--epsilon", "0.1", "0.3", "0.5", "--attack_image", "10","MNIST", "/Users/sandhyagiri/git/PriorNetworks/prior_networks/runtime-out2"]
         }
     ]
 }

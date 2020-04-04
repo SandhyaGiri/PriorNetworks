@@ -30,16 +30,16 @@ from prior_networks.adversarial.fgm import construct_fgm_attack
 
 matplotlib.use('agg')
 
-parser = argparse.ArgumentParser(description='Evaluates model predictions and uncertainty '
-                                             'on in-domain test data')
+parser = argparse.ArgumentParser(description='Constructs an FGSM attack on successfully classified images and \
+                    reports the results as epsilon vs missclassification_rate.')
 parser.add_argument('data_path', type=str,
                     help='Path where data is saved')
 parser.add_argument('dataset', choices=DATASET_DICT.keys(),
                     help='Specify name of dataset to evaluate model on.')
 parser.add_argument('output_path', type=str,
                     help='Path of directory for saving model outputs.')
-parser.add_argument('epsilon', type=int,
-                    help='Strength perturbation in pixels 0-255')
+parser.add_argument('--epsilon','--list', nargs='+', type=float,
+                    help='Strength perturbation in range of 0 to 1, ex: 0.25', required=True)
 parser.add_argument('--batch_size', type=int, default=256,
                     help='Batch size for processing')
 parser.add_argument('--model_dir', type=str, default='./',
@@ -52,6 +52,8 @@ parser.add_argument('--train', action='store_true',
                     help='Whether to evaluate on the training data instead of test data')
 parser.add_argument('--overwrite', action='store_true',
                     help='Whether to overwrite a previous run of this script')
+parser.add_argument('--attack_images', type=int, default=5000,
+                    help='Number of correctly classified images by model to be turned into adversarial samples.')
 
 from typing import Optional, Tuple
 
@@ -114,9 +116,7 @@ def construct_adversarial_dataset(model: nn.Module, epsilon, dataset: Dataset, b
     return logits.cpu(), labels.cpu(), adv.cpu()
 
 def perform_epsilon_attack(model, epsilon, dataset, batch_size, device, n_channels, output_path, mean, std):
-    assert 0 < epsilon <= 255
-
-    epsilon = float(epsilon) / 255
+    assert 0.0 < epsilon <= 1.0
     
     logits, labels, images = construct_adversarial_dataset(model=model,
                                                            dataset=dataset,
@@ -159,7 +159,10 @@ def perform_epsilon_attack(model, epsilon, dataset, batch_size, device, n_channe
     # Assess Misclassification Detection
     eval_misc_detect(labels, probs, uncertainties, save_path=output_path, misc_positive=True)
 
-    return accuracy
+    # return aversarial successes => total misclassifications
+    preds = np.argmax(probs, axis=1)
+    misclassified = np.argwhere(np.asarray(preds != labels, dtype=np.int32) == 1)
+    return misclassified.size
 
 def main():
     args = parser.parse_args()
@@ -211,7 +214,6 @@ def main():
     mean = np.array(DATASET_DICT[args.dataset].mean).reshape((3, 1, 1))
     std = np.array(DATASET_DICT[args.dataset].std).reshape((3, 1, 1))
 
-    attack_images = 10 
     image_indices = []
     # pick number of successfully classified images by the model, equal to #attack_images
     test_loader = DataLoader(dataset, batch_size=1, shuffle=False)
@@ -226,28 +228,27 @@ def main():
         if pred.item() == label.item():
             image_indices.append(i)
 
-        if len(image_indices) == attack_images:
+        if len(image_indices) == args.attack_images:
             break
     
     dataset = torch.utils.data.Subset(dataset, image_indices)
     print("dataset length:", len(dataset))
 
-    accuracies = []
-    epsilons = [1,5,10,15]
-    for epsilon in epsilons:
+    adv_success_rates = []
+    for epsilon in args.epsilon:
         out_path = os.path.join(args.output_path, f"e{epsilon}-attack")
         os.makedirs(out_path)
-        accuracy = perform_epsilon_attack(model, epsilon, dataset, args.batch_size, device, args.n_channels,out_path, mean, std)
-        accuracies.append(accuracy)
+        adv_success = perform_epsilon_attack(model, epsilon, dataset, args.batch_size, device, args.n_channels,out_path, mean, std)
+        adv_success_rates.append(adv_success / args.attack_images)
     
     # plot the epsilon, accuracy graph (line plot)
     plt.figure(figsize=(5,5))
-    plt.plot(epsilons, accuracies, "*-")
+    plt.plot(args.epsilon, adv_success_rates, "*-")
     plt.yticks(np.arange(0, 1.1, step=0.1))
-    plt.xticks(np.arange(1, 20, step=5))
-    plt.title("Accuracy vs Epsilon")
+    plt.xticks(np.arange(np.min(args.epsilon), np.max(args.epsilon), step=0.1))
+    plt.title("Adversarial Success Rate vs Epsilon")
     plt.xlabel("Epsilon")
-    plt.ylabel("Accuracy")
+    plt.ylabel("Adversarial Success Rate")
     plt.savefig(os.path.join(args.output_path, "epsilon-curve.png"))
 
 if __name__ == '__main__':

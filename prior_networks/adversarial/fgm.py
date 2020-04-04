@@ -38,6 +38,7 @@ def construct_fgm_attack(model,
         update = epsilon * grads.sign()
 
         perturbed_image = adv_inputs + update
+        perturbed_image = torch.clamp(perturbed_image, -1, 1) # re-normalize the image to range (-1,1)
         adv_inputs.data = perturbed_image
 
     return adv_inputs

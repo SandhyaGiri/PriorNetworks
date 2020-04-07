@@ -135,12 +135,24 @@ def perform_epsilon_attack(model, epsilon, dataset, batch_size, device, n_channe
     np.savetxt(os.path.join(output_path, 'probs.txt'), probs)
     np.savetxt(os.path.join(output_path, 'logits.txt'), logits)
 
+    # determine misclassifications
+    preds = np.argmax(probs, axis=1)
+    misclassifications = np.asarray(preds != labels, dtype=np.int32)
+    misclassified_indices = np.argwhere(misclassifications == 1)
+
+    # save only misclassified images (for saving space, also save corresponding original images)
     for i, image in enumerate(images):
-        if n_channels == 1:
-            # images were added new channels (3) to go through VGG, so remove unnecessary channels
-            Image.fromarray(image[0,:,:]).save(os.path.join(output_path, "adv-images", f"{i}.png"))
-        else:
-            Image.fromarray(image).save(os.path.join(output_path, "adv-images", f"{i}.png"))
+        if misclassifications[i] == 1:
+            orig_image, _ = dataset.__getitem__(i)
+            orig_image = orig_image.numpy()
+            orig_image = np.asarray((orig_image*std + mean)*255.0, dtype=np.uint8)
+            if n_channels == 1:
+                # images were added new channels (3) to go through VGG, so remove unnecessary channels
+                Image.fromarray(image[0,:,:]).save(os.path.join(output_path, "adv-images", f"{i}.png"))
+                Image.fromarray(orig_image[0,:,:]).save(os.path.join(output_path, "org-images", f"{i}.png"))
+            else:
+                Image.fromarray(image).save(os.path.join(output_path, "adv-images", f"{i}.png"))
+                Image.fromarray(orig_image).save(os.path.join(output_path, "org-images", f"{i}.png"))
 
     # Get dictionary of uncertainties.
     uncertainties = dirichlet_prior_network_uncertainty(logits)
@@ -160,9 +172,7 @@ def perform_epsilon_attack(model, epsilon, dataset, batch_size, device, n_channe
     eval_misc_detect(labels, probs, uncertainties, save_path=output_path, misc_positive=True)
 
     # return aversarial successes => total misclassifications
-    preds = np.argmax(probs, axis=1)
-    misclassified = np.argwhere(np.asarray(preds != labels, dtype=np.int32) == 1)
-    return misclassified.size
+    return misclassified_indices.size
 
 def main():
     args = parser.parse_args()
@@ -243,6 +253,7 @@ def main():
         attack_folder = os.path.join(args.output_path, f"e{epsilon}-attack")
         out_path = os.path.join(attack_folder, "adv-images")
         os.makedirs(out_path)
+        os.makedirs(os.path.join(attack_folder, "org-images"))
         adv_success = perform_epsilon_attack(model, epsilon, dataset, args.batch_size, device, args.n_channels,attack_folder, mean, std)
         adv_success_rates.append(adv_success / args.attack_images)
     

@@ -138,9 +138,9 @@ def perform_epsilon_attack(model, epsilon, dataset, batch_size, device, n_channe
     for i, image in enumerate(images):
         if n_channels == 1:
             # images were added new channels (3) to go through VGG, so remove unnecessary channels
-            Image.fromarray(image[0,:,:]).save(os.path.join(output_path, f"{i}.png"))
+            Image.fromarray(image[0,:,:]).save(os.path.join(output_path, "adv-images", f"{i}.png"))
         else:
-            Image.fromarray(image).save(output_path / f"{i}.png")
+            Image.fromarray(image).save(os.path.join(output_path, "adv-images", f"{i}.png"))
 
     # Get dictionary of uncertainties.
     uncertainties = dirichlet_prior_network_uncertainty(logits)
@@ -231,17 +231,22 @@ def main():
         if len(image_indices) == args.attack_images:
             break
     
+    # save the indices of the chosen samples, to enable comparison to pre-attack eval measures.
+    np.savetxt(os.path.join(args.output_path, "test-image-indices.txt"), np.asarray(image_indices, dtype=np.uint8))
+
     dataset = torch.utils.data.Subset(dataset, image_indices)
     print("dataset length:", len(dataset))
 
+    # perform attacks on the same dataset, using different epsilon values.
     adv_success_rates = []
     for epsilon in args.epsilon:
-        out_path = os.path.join(args.output_path, f"e{epsilon}-attack")
+        attack_folder = os.path.join(args.output_path, f"e{epsilon}-attack")
+        out_path = os.path.join(attack_folder, "adv-images")
         os.makedirs(out_path)
-        adv_success = perform_epsilon_attack(model, epsilon, dataset, args.batch_size, device, args.n_channels,out_path, mean, std)
+        adv_success = perform_epsilon_attack(model, epsilon, dataset, args.batch_size, device, args.n_channels,attack_folder, mean, std)
         adv_success_rates.append(adv_success / args.attack_images)
     
-    # plot the epsilon, accuracy graph (line plot)
+    # plot the epsilon, adversarial success rate graph (line plot)
     plt.figure(figsize=(5,5))
     plt.plot(args.epsilon, adv_success_rates, "*-")
     plt.yticks(np.arange(0, 1.1, step=0.1))

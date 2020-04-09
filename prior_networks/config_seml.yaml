@@ -1,6 +1,6 @@
 
 seml:
-  executable: 'trainer_seml.py'
+  executable: 'trainer_seml.py' # change to eval_seml.py for evaluation or attacks.
   db_collection: 'priornet'
   output_dir: '~/logs'
 
@@ -31,4 +31,9 @@ fixed:
   lr_decay_milestones: [1]
   batch_size: 64
   logdir: "/nfs/homedirs/giri/priornet/logs"
+  run_eval: False
+  run_attack: True
+  epsilon_list: [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
+  attack_images: 8000
+  attack_type: "PGD"
   

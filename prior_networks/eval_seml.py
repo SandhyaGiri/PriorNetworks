@@ -53,7 +53,8 @@ def run(in_domain_dataset, ood_dataset, input_image_size, num_classes, model_arc
 
     if run_attack is True:
         epsilons = " ".join(map(lambda x: str(x),epsilon_list))
-        out_dir = os.path.join(model_dir, f"{attack_type}-attack-{datetime.now()}")
+        time = int(datetime.timestamp(datetime.now()))
+        out_dir = os.path.join(model_dir, f"{attack_type}-attack-{time}")
         if attack_type == 'FGSM':
             fgsm_cmd = f"python ./adversarial/confidence_attack.py {gpu_list} --batch_size {batch_size} --epsilon {epsilons} --attack_type {attack_type} --model_dir {model_dir} --n_channels {num_channels} {data_dir} {in_domain_dataset} {out_dir}"
             logging.info(f"FGSM attack command being executed: {fgsm_cmd}")

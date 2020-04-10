@@ -31,8 +31,8 @@ from prior_networks.adversarial.pgd import construct_pgd_attack
 
 matplotlib.use('agg')
 
-parser = argparse.ArgumentParser(description='Constructs an FGSM attack on successfully classified images and \
-                    reports the results as epsilon vs missclassification_rate.')
+parser = argparse.ArgumentParser(description='Constructs an FGSM/PGD attack on test images and \
+                    reports the results as epsilon vs adversarial success rate.')
 parser.add_argument('data_path', type=str,
                     help='Path where data is saved')
 parser.add_argument('dataset', choices=DATASET_DICT.keys(),
@@ -53,8 +53,6 @@ parser.add_argument('--train', action='store_true',
                     help='Whether to evaluate on the training data instead of test data')
 parser.add_argument('--overwrite', action='store_true',
                     help='Whether to overwrite a previous run of this script')
-parser.add_argument('--attack_images', type=int, default=5000,
-                    help='Number of correctly classified images by model to be turned into adversarial samples.')
 parser.add_argument('--attack_type', type=str, choices=['FGSM', 'PGD'], default='FGSM',
                     help='Choose the type of attack to be performed.')
 parser.add_argument('--norm', type=str, choices=['inf', '2'], default='inf',
@@ -93,7 +91,7 @@ def construct_adversarial_dataset(model: nn.Module, epsilon, dataset: Dataset,
     :param device: device to use for evaluation
     :param num_workers: int, num. workers for the data loader
     :return: stacked torch tensor of logits returned by the model
-    on that dataset, and the labels
+    on the adversarial dataset, the corresponding labels and the generated adversarial images.
     """
     # Set model in eval mode
     model.eval()
@@ -110,13 +108,15 @@ def construct_adversarial_dataset(model: nn.Module, epsilon, dataset: Dataset,
             if device is not None:
                 inputs, labels = map(lambda x: x.to(device),
                                      (inputs, labels))
-                if attack_type == 'FGSM':
-                    adv_inputs = construct_fgm_attack(model=model, labels=labels, inputs=inputs, epsilon=epsilon, criterion=confidence_criteria)
-                elif attack_type == 'PGD':
-                    adv_inputs = construct_pgd_attack(model=model, labels=labels, inputs=inputs, epsilon=epsilon, criterion=confidence_criteria,
-                                    norm=norm, step_size=step_size, max_steps=max_steps)
-                model.zero_grad()
-                logits = model(adv_inputs)
+            if attack_type == 'FGSM':
+                adv_inputs = construct_fgm_attack(model=model, labels=labels, inputs=inputs, epsilon=epsilon, 
+                                criterion=confidence_criteria, device=device)
+            elif attack_type == 'PGD':
+                adv_inputs = construct_pgd_attack(model=model, labels=labels, inputs=inputs, epsilon=epsilon, 
+                                criterion=confidence_criteria, device=device,
+                                norm=norm, step_size=step_size, max_steps=max_steps)
+            model.zero_grad()
+            logits = model(adv_inputs)
 
             logits_list.append(logits)
             labels_list.append(labels)
@@ -128,7 +128,8 @@ def construct_adversarial_dataset(model: nn.Module, epsilon, dataset: Dataset,
 
     return logits.cpu(), labels.cpu(), adv.cpu()
 
-def perform_epsilon_attack(model, epsilon, dataset, batch_size, device, n_channels, output_path, mean, std, attack_type, **kwargs):
+def perform_epsilon_attack(model, epsilon, dataset, correct_classified_indices, 
+                            batch_size, device, n_channels, output_path, mean, std, attack_type, **kwargs):
     assert 0.0 < epsilon <= 1.0
     
     logits, labels, images = construct_adversarial_dataset(model=model,
@@ -142,34 +143,23 @@ def perform_epsilon_attack(model, epsilon, dataset, batch_size, device, n_channe
                                                            max_steps=kwargs.get('max_steps'))
     labels, probs, logits = labels.numpy(), F.softmax(logits, dim=1).numpy(), logits.numpy()
     images = images.numpy()
-    print(images.shape)
-
-    # Images to be in [-1, 1] interval, so rescale them back to [0, 1].
-    images= np.asarray((images*std + mean)*255.0, dtype=np.uint8)
+    print(f"Epsilon {epsilon} {attack_type} attack. Adv images: {images.shape}")
 
     # Save model outputs
     np.savetxt(os.path.join(output_path, 'labels.txt'), labels)
     np.savetxt(os.path.join(output_path, 'probs.txt'), probs)
     np.savetxt(os.path.join(output_path, 'logits.txt'), logits)
 
-    # determine misclassifications
+    # determine misclassifications under attack
     preds = np.argmax(probs, axis=1)
     misclassifications = np.asarray(preds != labels, dtype=np.int32)
     misclassified_indices = np.argwhere(misclassifications == 1)
 
-    # save only misclassified images (for saving space, also save corresponding original images)
-    for i, image in enumerate(images):
-        if misclassifications[i] == 1:
-            orig_image, _ = dataset.__getitem__(i)
-            orig_image = orig_image.numpy()
-            orig_image = np.asarray((orig_image*std + mean)*255.0, dtype=np.uint8)
-            if n_channels == 1:
-                # images were added new channels (3) to go through VGG, so remove unnecessary channels
-                Image.fromarray(image[0,:,:]).save(os.path.join(output_path, "adv-images", f"{i}.png"))
-                Image.fromarray(orig_image[0,:,:]).save(os.path.join(output_path, "org-images", f"{i}.png"))
-            else:
-                Image.fromarray(image).save(os.path.join(output_path, "adv-images", f"{i}.png"))
-                Image.fromarray(orig_image).save(os.path.join(output_path, "org-images", f"{i}.png"))
+    # count as success only those samples that are wrongly classified under attack, while they were correctly classified without attack.
+    adv_success = len(np.intersect1d(correct_classified_indices, misclassified_indices))
+
+    # save perturbed or adversarial images.
+    persist_images(images, mean, std, n_channels, os.path.join(output_path, "adv-images"))
 
     # Get dictionary of uncertainties.
     uncertainties = dirichlet_prior_network_uncertainty(logits)
@@ -188,8 +178,32 @@ def perform_epsilon_attack(model, epsilon, dataset, batch_size, device, n_channe
     # Assess Misclassification Detection
     eval_misc_detect(labels, probs, uncertainties, save_path=output_path, misc_positive=True)
 
-    # return aversarial successes => total misclassifications
-    return misclassified_indices.size
+    # return aversarial successes
+    return adv_success
+
+def persist_images(images, mean, std, n_channels, image_dir):
+    assert type(images) == np.ndarray, ("Unexpected input type. Cannot be persisted.")
+    # Images to be in [-1, 1] interval, so rescale them back to [0, 1].
+    images= np.asarray((images*std + mean)*255.0, dtype=np.uint8)
+
+    for i, image in enumerate(images):
+        if n_channels == 1:
+            # images were added new channels (3) to go through VGG, so remove unnecessary channels
+            Image.fromarray(image[0,:,:]).save(os.path.join(image_dir, f"{i}.png"))
+        else:
+            Image.fromarray(image).save(os.path.join(image_dir, f"{i}.png"))
+
+def persist_dataset(dataset, mean, std, n_channels, image_dir):
+    assert isinstance(dataset, torch.utils.data.Dataset), ("Dataset is not of right type. Cannot be persisted.")
+    images = []
+    testloader = DataLoader(dataset, batch_size=128,
+                            shuffle=False, num_workers=4)
+    with torch.no_grad():
+        for i, data in enumerate(testloader, 0):
+            image, _ = data
+            images.append(image)
+    
+    persist_images(torch.cat(images, dim=0).numpy(), mean, std, n_channels, image_dir)
 
 def main():
     args = parser.parse_args()
@@ -238,31 +252,25 @@ def main():
                                              download=True,
                                              split='test')
     
+    # dataset = DataSpliter.reduceSize(dataset, 16)
+
     mean = np.array(DATASET_DICT[args.dataset].mean).reshape((3, 1, 1))
     std = np.array(DATASET_DICT[args.dataset].std).reshape((3, 1, 1))
 
-    image_indices = []
-    # pick number of successfully classified images by the model, equal to #attack_images
-    test_loader = DataLoader(dataset, batch_size=1, shuffle=False)
-
-    for i, inputs in enumerate(test_loader):
-        # check if model classifies 
-        image, label = inputs
-        logits = model(image)
-        probs = F.log_softmax(logits, dim=1)
-        pred = probs.max(1, keepdim=True)[1] # get the index of the max log-probability
-
-        if pred.item() == label.item():
-            image_indices.append(i)
-
-        if len(image_indices) == args.attack_images:
-            break
-    
-    # save the indices of the chosen samples, to enable comparison to pre-attack eval measures.
-    np.savetxt(os.path.join(args.output_path, "test-image-indices.txt"), np.asarray(image_indices, dtype=np.uint32))
-
-    dataset = torch.utils.data.Subset(dataset, image_indices)
+    # dataset = torch.utils.data.Subset(dataset, image_indices)
     print("dataset length:", len(dataset))
+
+    org_dataset_folder = os.path.join(args.output_path, "org-images")
+    os.makedirs(org_dataset_folder)
+    persist_dataset(dataset, mean, std, args.n_channels, org_dataset_folder)
+
+    # perform original evaluation on the model using unperturbed images
+    logits, labels = eval_logits_on_dataset(model, dataset=dataset, device=device, batch_size=args.batch_size)
+    labels = labels.numpy()
+    # determine correct classifications without attack (original non perturbed images)
+    org_preds = np.argmax(F.softmax(logits, dim=1).numpy(), axis=1)
+    correct_classifications = np.asarray(org_preds == labels, dtype=np.int32)
+    correct_classified_indices = np.argwhere(correct_classifications == 1)
 
     # perform attacks on the same dataset, using different epsilon values.
     adv_success_rates = []
@@ -270,11 +278,10 @@ def main():
         attack_folder = os.path.join(args.output_path, f"e{epsilon}-attack")
         out_path = os.path.join(attack_folder, "adv-images")
         os.makedirs(out_path)
-        os.makedirs(os.path.join(attack_folder, "org-images"))
-        adv_success = perform_epsilon_attack(model, epsilon, dataset, args.batch_size, 
+        adv_success = perform_epsilon_attack(model, epsilon, dataset, correct_classified_indices, args.batch_size, 
                             device, args.n_channels,attack_folder, mean, std, args.attack_type,
                             norm=args.norm, step_size=args.step_size, max_steps=args.max_steps)
-        adv_success_rates.append(adv_success / args.attack_images)
+        adv_success_rates.append(adv_success / len(correct_classified_indices))
     
     # plot the epsilon, adversarial success rate graph (line plot)
     plt.figure(figsize=(5,5))

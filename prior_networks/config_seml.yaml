@@ -1,6 +1,6 @@
 
 seml:
-  executable: 'trainer_seml.py' # change to eval_seml.py for evaluation or attacks.
+  executable: 'trainer_seml.py' # change to eval_seml.py for evaluation or attacks, and trainer_seml.py for training.
   db_collection: 'priornet'
   output_dir: '~/logs'
 
@@ -24,7 +24,7 @@ fixed:
   num_channels: 1
   learning_rate: 0.0001
   drop_rate: 0.05
-  model_dir: "./runtime-model"
+  model_dir: "./runtime-model-50epochs-b64-expdecay-reverseKL"
   data_dir: "./runtime-data"
   train_file: "./priornet/run/train_dpn.py"
   setup_file: "./priornet/setup/setup_dpn.py"
@@ -34,6 +34,6 @@ fixed:
   run_eval: False
   run_attack: True
   epsilon_list: [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-  attack_images: 8000
   attack_type: "PGD"
+  attack_norm: "inf"
   

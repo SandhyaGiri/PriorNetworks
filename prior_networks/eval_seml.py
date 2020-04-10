@@ -4,6 +4,7 @@ from sacred import Experiment
 import numpy as np
 from seml import database_utils as db_utils
 from seml import misc
+from datetime import datetime
 
 
 ex = Experiment()
@@ -21,7 +22,7 @@ def config():
 @ex.automain
 def run(in_domain_dataset, ood_dataset, input_image_size, num_classes, model_arch, num_epochs, num_channels,
             learning_rate, drop_rate, model_dir, data_dir, lr_decay_milestones, train_file, setup_file, 
-            batch_size, logdir, run_eval, run_attack, epsilon_list, attack_images, attack_type):
+            batch_size, logdir, run_eval, run_attack, epsilon_list, attack_type, attack_norm):
     """
     Performs both in-domain evaluation, and ood evaluation and the corersponding results are stored under eval/ and ood-eval/ inside the model_dir.
     """
@@ -52,14 +53,13 @@ def run(in_domain_dataset, ood_dataset, input_image_size, num_classes, model_arc
 
     if run_attack is True:
         epsilons = " ".join(map(lambda x: str(x),epsilon_list))
-        out_dir = os.path.join(model_dir, f"{attack_type}-attack-{attack_images}images")
+        out_dir = os.path.join(model_dir, f"{attack_type}-attack-{datetime.now()}")
         if attack_type == 'FGSM':
-            fgsm_cmd = f"python ./adversarial/confidence_attack.py {gpu_list} --batch_size {batch_size} --epsilon {epsilons} --attack_images {attack_images} --attack_type {attack_type} --model_dir {model_dir} --n_channels {num_channels} {data_dir} {in_domain_dataset} {out_dir}"
+            fgsm_cmd = f"python ./adversarial/confidence_attack.py {gpu_list} --batch_size {batch_size} --epsilon {epsilons} --attack_type {attack_type} --model_dir {model_dir} --n_channels {num_channels} {data_dir} {in_domain_dataset} {out_dir}"
             logging.info(f"FGSM attack command being executed: {fgsm_cmd}")
             os.system(fgsm_cmd)
         elif attack_type == "PGD":
-            norm = "inf"
-            pgd_cmd = f"python ./adversarial/confidence_attack.py {gpu_list} --batch_size {batch_size} --epsilon {epsilons} --attack_images {attack_images} --attack_type {attack_type} --norm {norm} --model_dir {model_dir} --n_channels {num_channels} {data_dir} {in_domain_dataset} {out_dir}"
+            pgd_cmd = f"python ./adversarial/confidence_attack.py {gpu_list} --batch_size {batch_size} --epsilon {epsilons} --attack_type {attack_type} --norm {attack_norm} --model_dir {model_dir} --n_channels {num_channels} {data_dir} {in_domain_dataset} {out_dir}"
             logging.info(f"PGD attack command being executed: {pgd_cmd}")
             os.system(pgd_cmd)
     

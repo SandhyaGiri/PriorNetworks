@@ -13,6 +13,7 @@ import torch.nn.functional as F
 
 from prior_networks.assessment.ood_detection import eval_ood_detect
 from prior_networks.evaluation import eval_logits_on_dataset
+from prior_networks.adversarial.confidence_attack import construct_adversarial_dataset
 from prior_networks.datasets.image import construct_transforms
 from prior_networks.datasets.image.dataspliter import DataSpliter
 from prior_networks.priornet.dpn import dirichlet_prior_network_uncertainty
@@ -42,7 +43,8 @@ parser.add_argument('--gpu', type=int, action='append',
                     help='Specify which GPUs to to run on.')
 parser.add_argument('--overwrite', action='store_true',
                     help='Whether to overwrite a previous run of this script')
-
+parser.add_argument('--use_attack_id_dataset', action='store_true',
+                    help='Inidcates if attack images corresponding to normal id_dataset should be used')
 
 def main():
     args = parser.parse_args()
@@ -80,6 +82,7 @@ def main():
                                                target_transform=None,
                                                download=True,
                                                split='test')
+
     # id_dataset = DataSpliter.reduceSize(id_dataset, 10)
 
     ood_dataset = DATASET_DICT[args.ood_dataset](root=args.data_path,
@@ -96,10 +99,21 @@ def main():
 
 
     # Evaluate the model
-    id_logits, id_labels = eval_logits_on_dataset(model=model,
-                                                  dataset=id_dataset,
-                                                  batch_size=args.batch_size,
-                                                  device=device)
+    if args.use_attack_id_dataset:
+        id_logits, id_labels, _ = construct_adversarial_dataset(model=model,
+                                                           dataset=id_dataset,
+                                                           epsilon=0.5,
+                                                           batch_size=args.batch_size,
+                                                           device=device,
+                                                           attack_type='FGSM',
+                                                           step_size=0.4,
+                                                           norm='inf',
+                                                           max_steps=10)
+    else:
+        id_logits, id_labels = eval_logits_on_dataset(model=model,
+                                                    dataset=id_dataset,
+                                                    batch_size=args.batch_size,
+                                                    device=device)
 
     ood_logits, ood_labels = eval_logits_on_dataset(model=model,
                                                     dataset=ood_dataset,

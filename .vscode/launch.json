@@ -23,7 +23,7 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/prior_networks/priornet/run/ood_detect.py",
-            "args" : ["--gpu", "-1", "--batch_size", "1","--n_channels", "1", "--model_dir", "/Users/sandhyagiri/git/PriorNetworks/prior_networks/runtime-model1", "/Users/sandhyagiri/git/PriorNetworks/prior_networks/runtime-data","MNIST", "OMNIGLOT", "/Users/sandhyagiri/git/PriorNetworks/prior_networks/runtime-out1"]
+            "args" : ["--gpu", "-1", "--batch_size", "1","--n_channels", "1", "--use_attack_id_dataset", "--model_dir", "/Users/sandhyagiri/git/PriorNetworks/prior_networks/runtime-model1", "/Users/sandhyagiri/git/PriorNetworks/prior_networks/runtime-data","MNIST", "OMNIGLOT", "/Users/sandhyagiri/git/PriorNetworks/prior_networks/runtime-out1"]
         },
         {
             "name": "Python: eval_ID.py",
